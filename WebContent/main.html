@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="ISO-8859-1">
+	<title>Getting started with Cannon.js</title>
+	<style>
+		body {
+			margin: 0;
+			overflow: hidden;
+		}
+	</style>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"> </script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r73/three.js"></script>
+</head>
+<body>
+	<script> 
+		var renderer, scene, camera;
+		var geometry, material;
+		var meshes=[], bodies=[];
+		var plane, planeBody, angle = -Math.PI / 2;
+		var world;
+		
+		var sphereShape, sphereMaterial;
+		
+		function init() {
+			loadScene();
+			loadWorld();		
+		};
+		
+		function loadScene(){
+			renderer = new THREE.WebGLRenderer();
+			renderer.setSize( window.innerWidth, window.innerHeight);
+			document.body.appendChild( renderer.domElement);
+			renderer.shadowMap.enabled = true;
+			renderer.shadowMapSoft = true;
+			renderer.setClearColor(0xbbccbb);
+			
+			scene = new THREE.Scene();
+			camera = new THREE.PerspectiveCamera( 40, window.innerWidth / window.innerHeight, 1, 1000);
+			camera.position.set(30, 50, 30);
+			camera.lookAt( scene.position );
+			camera.position.y += 10;
+			
+			var axis = new THREE.AxisHelper(5);
+			axis.position.y = 5;
+			scene.add(axis);
+			
+			plane = new THREE.Mesh( new THREE.PlaneGeometry(25, 25), new THREE.MeshLambertMaterial( {color:0xcccccc} ) );
+			plane.rotation.x = -Math.PI / 2;
+			plane.receiveShadow = true;
+			scene.add(plane);
+			
+			var ambient = new THREE.AmbientLight( 0x555555 );
+			scene.add(ambient);
+			
+			var light = new THREE.SpotLight( 0xdddddd );
+			light.position.set( 30, 50, 30);
+			light.castShadow = true;
+			light.shadowMapWidth = 1024;
+			light.shadowMapHeight = 1024;
+			light.shadowCameraNear = 1;
+			light.shadowCameraFar = 100;
+			light.shadowDarkness = 1;
+			scene.add(light);
+			
+			// Preloading the sphere parameters so that it runs faster
+			material = new THREE.MeshPhongMaterial();
+			material.map = new THREE.TextureLoader().load('img/map2.jpg');
+			
+			sphereShape = new CANNON.Sphere( 1 );
+			sphereMaterial = new CANNON.Material();
+			
+			geometry = new THREE.SphereGeometry(1, 16, 16);	
+		};
+		
+		
+		function addBalls(x, y, z) {	
+			// Ball geometry
+			var mesh = new THREE.Mesh(geometry, material);
+			mesh.castShadow = true;
+			mesh.receiveShadow = true;
+			scene.add( mesh );
+			meshes.push( mesh );
+				
+			// Ball body
+			var sphereBody = new CANNON.Body( {mass:0.1, shape:sphereShape, material:sphereMaterial} );
+			sphereBody.position.set(x, y, z);
+			world.add( sphereBody );
+			bodies.push(sphereBody);
+		};
+		
+		function loadWorld() {
+			// Creating world and setting gravity
+			world = new CANNON.World();
+			world.gravity.set(0, -9.82, 0);
+			
+			var planeShape = new CANNON.Plane();
+			var planeMaterial = new CANNON.Material();
+						
+			// plane -x
+			planeBody = new CANNON.Body( {mass:0, shape:planeShape, material:planeMaterial});
+			planeBody.position.set(-10, 0, 0);
+			planeBody.quaternion.setFromAxisAngle( new CANNON.Vec3(0, 1, 0), Math.PI / 2);
+			world.add(planeBody);
+			
+			// plane x
+			planeBody = new CANNON.Body( {mass:0, shape:planeShape, material:planeMaterial});
+			planeBody.position.set(10, 0, 0);
+			planeBody.quaternion.setFromAxisAngle( new CANNON.Vec3(0, 1, 0), -Math.PI / 2);
+			world.add(planeBody);
+			
+			// plane -z
+			planeBody = new CANNON.Body( {mass:0, shape:planeShape, material:planeMaterial});
+			planeBody.position.set(0, 0, -10);
+			//planeBody.quaternion.setFromAxisAngle( new CANNON.Vec3(0, 1, 0), 2*Math.PI);
+			world.add(planeBody);
+			
+			// plane z
+			planeBody = new CANNON.Body( {mass:0, shape:planeShape, material:planeMaterial});
+			planeBody.position.set(0, 0, 10);
+			planeBody.quaternion.setFromAxisAngle( new CANNON.Vec3(0, 1, 0), Math.PI);
+			world.add(planeBody);
+			
+			// top
+			planeBody = new CANNON.Body( {mass:0, shape:planeShape, material:planeMaterial});
+			planeBody.position.set(0, 20, 0);
+			planeBody.quaternion.setFromAxisAngle( new CANNON.Vec3(1, 0, 0), Math.PI / 2);
+			world.add(planeBody);	
+			
+			// ground
+			planeShape = new CANNON.Plane();
+			planeMaterial = new CANNON.Material();
+			planeBody = new CANNON.Body( {mass:0, shape:planeShape, material:planeMaterial});
+			planeBody.quaternion.setFromAxisAngle( new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
+			world.add(planeBody);
+		};
+		
+		function render() {
+			requestAnimationFrame( render );
+			
+			// Time interval between interactions calc  
+			world.step( 1 / 30 );
+			
+			// Add balls in scene
+			if( meshes.length < 150)
+				addBalls(5 - 10 * Math.random() * Math.random(), 
+						 5 - 10 * Math.random() * Math.random(), 
+						 5 - 10 * Math.random() * Math.random());
+				
+			// Updating meshes with body positions
+			for( var i = 0; i < meshes.length; i++) {
+				meshes[i].position.copy( bodies[i].position );
+				meshes[i].quaternion.copy( bodies[i].quaternion );
+			}
+			
+			renderer.render(scene, camera);
+		};
+		
+		window.addEventListener("resize", function() {
+			var width = window.innerWidth;
+			var height = window.innerHeight;
+			renderer.setSize(width, height);
+			camera.aspect = width / height;
+			camera.updateProjectionMatrix();
+		});
+		
+		window.addEventListener("keydown", function(e) {			
+			switch( +e.keyCode ){
+			case 65:
+				angle += 0.03;
+				plane.rotation.x = angle;
+				planeBody.quaternion.copy(plane.quaternion);
+				break;
+			case 68:
+				angle -= 0.03;
+				plane.rotation.x = angle;
+				planeBody.quaternion.copy(plane.quaternion);
+				break;
+			}		
+		});
+		
+		init();
+		render();
+	</script>
+
+
+</body>
+</html>
