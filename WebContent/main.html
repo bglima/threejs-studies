@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="ISO-8859-1">
+<title>Using an skybox!</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r73/three.js"></script>
+<script src="http://threejs.org/examples/js/controls/TrackballControls.js"></script>
+<style>
+	body {margin:0; overflow:hidden}
+	canvas {width:100%; height:100%}
+</style>
+</head>
+<body>
+	<div id="threejs"></div>
+	<script>
+		var scene, renderer;
+		var camera, controls;
+		var width, height;
+		var light, ambient;
+		var cube;
+		
+		init();
+		
+		function init() {
+			width = window.innerWidth;
+			height = window.innerHeight;
+			
+			loadScene();
+			loadMeshes();
+			loadLights();
+			render();
+		};
+		
+		function loadScene() {
+			scene = new THREE.Scene();
+			camera = new THREE.PerspectiveCamera(45, width/height, 0.1, 2000);
+			camera.position.z = 15;
+			camera.lookAt(scene.position);
+			renderer = new THREE.WebGLRenderer({antialias:true} );
+			renderer.setSize(width, height);
+			renderer.setClearColor(0xdfdfdf);
+			renderer.shadowMap.enabled = true;
+			renderer.shadowMapSoft = true;
+			document.getElementById("threejs").appendChild(renderer.domElement);
+			
+			controls = new THREE.TrackballControls( camera, renderer.domElement);
+			controls.lookSpeed = 0.4;
+		    controls.movementSpeed = 20;
+		    controls.noFly = true;
+		    controls.lookVertical = true;
+		    controls.constrainVertical = true;
+		    controls.verticalMin = 1.0;
+		    controls.verticalMax = 2.0;
+		    controls.lon = -150;
+		    controls.lat = 120;
+		};
+		
+		function loadMeshes(){	
+			var boxMap = new THREE.TextureLoader().load('skybox3.jpg');
+			
+			var material = new THREE.MeshBasicMaterial({
+				map: boxMap,
+				side: THREE.BackSide		
+			});
+			
+			var posx = [new THREE.Vector2(0.5,  .666), new THREE.Vector2(0.5,  .333),
+			            new THREE.Vector2(0.75, .333),  new THREE.Vector2(0.75, .666)];
+			var negx = [new THREE.Vector2(0,    .666), new THREE.Vector2(0,    .333),
+			            new THREE.Vector2(0.25, .333),  new THREE.Vector2(0.25, .666)];
+			
+			var posz = [new THREE.Vector2(0.25,  .666), new THREE.Vector2(0.25, .333),  
+			            new THREE.Vector2(0.5,   .333),  new THREE.Vector2(0.5,  .666)];
+			var negz = [new THREE.Vector2(0.75,  .666), new THREE.Vector2(0.75, .333), 
+			            new THREE.Vector2(1  ,   .333),  new THREE.Vector2(1,    .666)];
+			
+			var posy = [new THREE.Vector2(0.255,  1),    new THREE.Vector2(0.255, .666),
+			            new THREE.Vector2(0.499,  .666),  new THREE.Vector2(0.499,   1)];
+			var negy = [new THREE.Vector2(0.25, .333), new THREE.Vector2(0.25, 0), 
+			            new THREE.Vector2(0.5,  0),     new THREE.Vector2(0.5,  .333)];
+			
+			var cubeGeometry = new THREE.BoxGeometry(1000, 1000, 1000);
+			
+			
+			cubeGeometry.faceVertexUvs[0] = [];
+			
+			cubeGeometry.faceVertexUvs[0][0] = [ posx[0], posx[1], posx[3]];
+			cubeGeometry.faceVertexUvs[0][1] = [ posx[1], posx[2], posx[3]];
+			cubeGeometry.faceVertexUvs[0][2] = [ negx[0], negx[1], negx[3]];
+			cubeGeometry.faceVertexUvs[0][3] = [ negx[1], negx[2], negx[3]];
+			
+			cubeGeometry.faceVertexUvs[0][4] = [ posy[0], posy[1], posy[3]];
+			cubeGeometry.faceVertexUvs[0][5] = [ posy[1], posy[2], posy[3]];
+			cubeGeometry.faceVertexUvs[0][6] = [ negy[0], negy[1], negy[3]];
+			cubeGeometry.faceVertexUvs[0][7] = [ negy[1], negy[2], negy[3]];
+			
+			cubeGeometry.faceVertexUvs[0][8] = [ posz[0], posz[1], posz[3]];
+			cubeGeometry.faceVertexUvs[0][9] = [ posz[1], posz[2], posz[3]];
+			cubeGeometry.faceVertexUvs[0][10] = [ negz[0], negz[1], negz[3]];
+			cubeGeometry.faceVertexUvs[0][11] = [ negz[1], negz[2], negz[3]];
+			
+
+			cube = new THREE.Mesh(cubeGeometry, material);
+			scene.add(cube);
+		};
+		
+		function loadLights() {
+			ambient = new THREE.AmbientLight(0xbbbbbb);
+			light = new THREE.SpotLight(0x5555555);
+			light.castShadow = true;
+			light.shadowCameraNear = 8;
+			light.shadowCameraFar = 400;
+			light.shadowDarkness = 1;
+			light.shadowMapWidth = 2048;
+			light.shadowMapHeight = 2048;
+			light.position.set(8, 15, 15);
+			
+			scene.add(ambient);
+			scene.add(light);
+		};
+		
+		function render() {
+			requestAnimationFrame(render);
+			controls.update();
+			renderer.render(scene, camera);
+		};
+		
+		window.addEventListener("resize", function() {
+			width = window.innerWidth;
+			height = window.innerHeight;
+			renderer.setSize(width, height);
+			camera.aspect = width/height;
+			camera.updateProjectionMatrix();
+		});
+	</script>
+</body>
+</html>
